@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "615977223469",
+    "project_id": "business-card-management-59272",
+    "storage_bucket": "business-card-management-59272.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:615977223469:android:dbe16fad1e1273e27bbfa4",
+        "android_client_info": {
+          "package_name": "com.example.swiftcard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxQaygPrniw4vOTJGlcVfC7Y-pQlF-yFM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

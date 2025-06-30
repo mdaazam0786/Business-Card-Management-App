@@ -5,10 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.swiftcard.data.model.BusinessCard
 import com.example.swiftcard.data.repository.BusinessCardRepository
+import com.example.swiftcard.util.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -17,6 +20,9 @@ import javax.inject.Inject
 class AddEditViewModel @Inject constructor(
     private val repository: BusinessCardRepository
 ) : ViewModel() {
+
+    private val _uiEvent = Channel<UiEvent>() // Add this
+    val uiEvent = _uiEvent.receiveAsFlow()
 
     private val _businessCard = MutableStateFlow<BusinessCard?>(null)
     val businessCard: StateFlow<BusinessCard?> = _businessCard.asStateFlow()
@@ -43,9 +49,15 @@ class AddEditViewModel @Inject constructor(
                 repository.saveBusinessCard(card)
             } catch (e: Exception) {
                 println("Error saving business card: ${e.message}")
+                sendUiEvent(UiEvent.ShowSnackBar(message = "Error saving card: ${e.message}"))
             } finally {
                 _isSaving.value = false
             }
+        }
+    }
+    private fun sendUiEvent(event: UiEvent) {
+        viewModelScope.launch {
+            _uiEvent.send(event)
         }
     }
 }

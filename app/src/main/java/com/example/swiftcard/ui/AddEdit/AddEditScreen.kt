@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.swiftcard.data.model.BusinessCard
+import com.example.swiftcard.util.UiEvent
 
 // AddEditBusinessCardScreen: For adding new business cards or editing existing ones.
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,10 +26,21 @@ fun AddEditScreen(
     onSaveComplete: () -> Unit,
     onBack: () -> Unit
 ) {
+    val snackbarHostState = remember { SnackbarHostState() } // Add th
+
     // Load existing card if ID is provided
-    LaunchedEffect(businessCardId) {
-        if (businessCardId != null) {
-            viewModel.loadBusinessCard(businessCardId)
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                UiEvent.PopBackStack -> onSaveComplete()
+                is UiEvent.ShowSnackBar -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        actionLabel = event.action
+                    )
+                }
+                else -> Unit
+            }
         }
     }
 
@@ -55,6 +67,7 @@ fun AddEditScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(if (businessCardId == null) "Add Business Card" else "Edit Business Card") },

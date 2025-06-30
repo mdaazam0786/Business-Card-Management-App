@@ -7,6 +7,8 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -121,12 +123,16 @@ fun ScanBusinessCardScreen(
                                 object : ImageCapture.OnImageSavedCallback {
                                     override fun onError(exc: ImageCaptureException) {
                                         Log.e("CameraX", "Photo capture failed: ${exc.message}", exc)
-                                        Toast.makeText(context, "Photo capture failed", Toast.LENGTH_SHORT).show()
+                                        Handler(Looper.getMainLooper()).post {
+                                            Toast.makeText(context, "Photo capture failed", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
 
                                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                                         val savedUri = output.savedUri ?: Uri.fromFile(photoFile)
-                                        Toast.makeText(context, "Photo captured!", Toast.LENGTH_SHORT).show()
+                                        Handler(Looper.getMainLooper()).post {
+                                            Toast.makeText(context, "Photo captured!", Toast.LENGTH_SHORT).show()
+                                        }
                                         processImageForOcr(context, savedUri, onScanComplete, scope)
                                     }
                                 }

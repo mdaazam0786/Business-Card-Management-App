@@ -81,6 +81,7 @@ dependencies {
 
 
     // CameraX dependencies
+<<<<<<< HEAD
     implementation(libs.androidx.camera.core)// Use the latest stable version
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
@@ -88,4 +89,13 @@ dependencies {
     implementation(libs.androidx.camera.extensions)
 
     implementation("com.google.mlkit:text-recognition:16.0.1")
+=======
+    implementation("androidx.camera:camera-core:1.3.3") // Use the latest stable version
+    implementation("androidx.camera:camera-camera2:1.3.3")
+    implementation("androidx.camera:camera-lifecycle:1.3.3")
+    implementation("androidx.camera:camera-view:1.3.3") // For PreviewView
+    implementation("androidx.camera:camera-extensions:1.3.3")
+
+    implementation("com.google.mlkit:text-recognition:16.0.0")
+>>>>>>> d403a9bbed3c91b0f5fb5115fa24772c0ca68cc0
 }

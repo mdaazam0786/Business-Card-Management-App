@@ -108,7 +108,7 @@ fun ScanBusinessCardScreen(
             )
         },
         floatingActionButton = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 FloatingActionButton(
                     onClick = {
                         imageCapture.value?.let { capture ->
@@ -133,14 +133,22 @@ fun ScanBusinessCardScreen(
                             )
                         }
                     },
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier
                 ) {
-                    Icon(painterResource(R.drawable.img), contentDescription = "Take Photo")
+                    Icon(
+                        painter = painterResource(R.drawable.img),
+                        contentDescription = "Take Photo",
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
                 FloatingActionButton(
                     onClick = { imagePickerLauncher.launch("image/*") }
                 ) {
-                    Icon(painterResource(R.drawable.img_1), contentDescription = "Pick from Gallery")
+                    Icon(
+                        painter = painterResource(R.drawable.img_1),
+                        contentDescription = "Pick from Gallery",
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         },

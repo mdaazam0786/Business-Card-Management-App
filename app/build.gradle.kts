@@ -60,9 +60,9 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation(platform("com.google.firebase:firebase-bom:33.15.0")) // Keep this BOM for consistent versions
-    implementation("com.google.firebase:firebase-analytics") // Already there
-    implementation("com.google.firebase:firebase-database-ktx") // Firebase Realtime Database
+    implementation(platform("com.google.firebase:firebase-bom:33.15.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
 
     implementation("com.google.dagger:hilt-android:2.56.2")
@@ -70,32 +70,18 @@ dependencies {
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     kapt("androidx.hilt:hilt-compiler:1.0.0")
 
-
-
-
     val nav_version = "2.9.0"
     implementation("androidx.navigation:navigation-compose:$nav_version")
 
-
     implementation("io.coil-kt:coil-compose:2.2.2")
 
-
     // CameraX dependencies
-<<<<<<< HEAD
-    implementation(libs.androidx.camera.core)// Use the latest stable version
+    implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view) // For PreviewView
+    implementation(libs.androidx.camera.view)
     implementation(libs.androidx.camera.extensions)
 
+    // ML Kit Text Recognition
     implementation("com.google.mlkit:text-recognition:16.0.1")
-=======
-    implementation("androidx.camera:camera-core:1.3.3") // Use the latest stable version
-    implementation("androidx.camera:camera-camera2:1.3.3")
-    implementation("androidx.camera:camera-lifecycle:1.3.3")
-    implementation("androidx.camera:camera-view:1.3.3") // For PreviewView
-    implementation("androidx.camera:camera-extensions:1.3.3")
-
-    implementation("com.google.mlkit:text-recognition:16.0.0")
->>>>>>> d403a9bbed3c91b0f5fb5115fa24772c0ca68cc0
 }

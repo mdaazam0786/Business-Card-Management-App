@@ -31,10 +31,6 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-<<<<<<< HEAD
-=======
-        enableEdgeToEdge()
->>>>>>> d403a9bbed3c91b0f5fb5115fa24772c0ca68cc0
         setContent {
             SwiftCardTheme {
 

@@ -7,11 +7,8 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
-<<<<<<< HEAD
 import android.os.Handler
 import android.os.Looper
-=======
->>>>>>> d403a9bbed3c91b0f5fb5115fa24772c0ca68cc0
 import android.provider.MediaStore
 import android.util.Log
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -20,7 +17,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
-import androidx.camera.core.ImageCapture
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.*
@@ -48,16 +44,15 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import com.example.swiftcard.R
 
-// ScanBusinessCardScreen: Handles camera preview, image capture, and OCR.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanBusinessCardScreen(
-    onScanComplete: (extractedData: Map<String, String>) -> Unit, // Placeholder for extracted data
+    onScanComplete: (extractedData: Map<String, String>) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-<<<<<<< HEAD
+
     val cameraExecutor = remember { mutableStateOf<ExecutorService?>(null) }
     val imageCapture = remember { mutableStateOf<ImageCapture?>(null) }
     val scope = rememberCoroutineScope()
@@ -65,48 +60,26 @@ fun ScanBusinessCardScreen(
     var hasCameraPermission by remember { mutableStateOf(false) }
     var permissionRequested by remember { mutableStateOf(false) }
 
-=======
-    val cameraExecutor: MutableState<ExecutorService?> = remember { mutableStateOf(null) }
-    val imageCapture: MutableState<ImageCapture?> = remember { mutableStateOf(null) }
-    val scope = rememberCoroutineScope()
-
->>>>>>> d403a9bbed3c91b0f5fb5115fa24772c0ca68cc0
-    // Request camera permissions
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
-        if (!isGranted) {
+        if (isGranted) {
+            hasCameraPermission = true
+        } else {
             Toast.makeText(context, "Camera permission denied", Toast.LENGTH_SHORT).show()
-            onBack() // Go back if permission is denied
+            onBack()
         }
     }
 
-    // Launch permission request when the screen first appears
     LaunchedEffect(Unit) {
-        when {
-<<<<<<< HEAD
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.CAMERA
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                hasCameraPermission = true
-                // Permission already granted
-            }
-
-            !permissionRequested -> {
-                permissionRequested = true
-=======
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED -> {
-                // Permission already granted
-            }
-            else -> {
->>>>>>> d403a9bbed3c91b0f5fb5115fa24772c0ca68cc0
-                permissionLauncher.launch(Manifest.permission.CAMERA)
-            }
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            hasCameraPermission = true
+        } else if (!permissionRequested) {
+            permissionRequested = true
+            permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
-    // DisposableEffect to manage camera executor lifecycle
     DisposableEffect(Unit) {
         cameraExecutor.value = Executors.newSingleThreadExecutor()
         onDispose {
@@ -114,12 +87,11 @@ fun ScanBusinessCardScreen(
         }
     }
 
-    // For picking an image from the gallery
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? ->
             uri?.let {
-                processImageForOcr(context, it, onScanComplete, coroutineScope = scope)
+                processImageForOcr(context, it, onScanComplete, scope)
             }
         }
     )
@@ -136,8 +108,6 @@ fun ScanBusinessCardScreen(
             )
         },
         floatingActionButton = {
-<<<<<<< HEAD
-
             if (hasCameraPermission) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     FloatingActionButton(
@@ -149,120 +119,50 @@ fun ScanBusinessCardScreen(
                                     context.externalCacheDir,
                                     "${System.currentTimeMillis()}.jpg"
                                 )
-                                val outputOptions =
-                                    ImageCapture.OutputFileOptions.Builder(photoFile).build()
-
+                                val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
                                 capture.takePicture(
                                     outputOptions,
-                                    cameraExecutor.value!!,
+                                    executor,
                                     object : ImageCapture.OnImageSavedCallback {
                                         override fun onError(exc: ImageCaptureException) {
-                                            Log.e(
-                                                "CameraX",
-                                                "Photo capture failed: ${exc.message}",
-                                                exc
-                                            )
-                                            // Show Toast on main thread to avoid camera crash: "Can't toast on a thread that has not called Looper.prepare()"
+                                            Log.e("CameraX", "Photo capture failed: ${exc.message}", exc)
                                             Handler(Looper.getMainLooper()).post {
-                                                Toast.makeText(
-                                                    context,
-                                                    "Photo capture failed",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-
+                                                Toast.makeText(context, "Photo capture failed", Toast.LENGTH_SHORT).show()
                                             }
-
                                         }
-
                                         override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                                            val savedUri =
-                                                output.savedUri ?: Uri.fromFile(photoFile)
-
-                                            // Show Toast on main thread to avoid Camera crash: "Can't toast on a thread that has not called Looper.prepare()"
+                                            val savedUri = output.savedUri ?: Uri.fromFile(photoFile)
                                             Handler(Looper.getMainLooper()).post {
-                                                Toast.makeText(
-                                                    context,
-                                                    "Photo captured!",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
+                                                Toast.makeText(context, "Photo captured!", Toast.LENGTH_SHORT).show()
                                             }
-
-                                            processImageForOcr(
-                                                context,
-                                                savedUri,
-                                                onScanComplete,
-                                                scope
-                                            )
+                                            processImageForOcr(context, savedUri, onScanComplete, scope)
                                         }
                                     }
                                 )
                             } else {
-                                Toast.makeText(context, "Camera not ready", Toast.LENGTH_SHORT)
-                                    .show()
+                                Toast.makeText(context, "Camera not ready", Toast.LENGTH_SHORT).show()
                                 Log.e("CameraX", "imageCapture or executor is null")
                             }
                         },
-                        modifier = Modifier.padding(bottom = 8.dp),
-
-                        ) {
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    ) {
                         Icon(painterResource(R.drawable.img), contentDescription = "Take Photo")
                     }
                     FloatingActionButton(
                         onClick = { imagePickerLauncher.launch("image/*") }
                     ) {
-                        Icon(
-                            painterResource(R.drawable.img_1),
-                            contentDescription = "Pick from Gallery"
-                        )
+                        Icon(painterResource(R.drawable.img_1), contentDescription = "Pick from Gallery")
                     }
-=======
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                FloatingActionButton(
-                    onClick = {
-                        imageCapture.value?.let { capture ->
-                            val photoFile = File(context.externalCacheDir, "${System.currentTimeMillis()}.jpg")
-                            val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-
-                            capture.takePicture(
-                                outputOptions,
-                                cameraExecutor.value!!,
-                                object : ImageCapture.OnImageSavedCallback {
-                                    override fun onError(exc: ImageCaptureException) {
-                                        Log.e("CameraX", "Photo capture failed: ${exc.message}", exc)
-                                        Toast.makeText(context, "Photo capture failed", Toast.LENGTH_SHORT).show()
-                                    }
-
-                                    override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                                        val savedUri = output.savedUri ?: Uri.fromFile(photoFile)
-                                        Toast.makeText(context, "Photo captured!", Toast.LENGTH_SHORT).show()
-                                        processImageForOcr(context, savedUri, onScanComplete, scope)
-                                    }
-                                }
-                            )
-                        }
-                    },
-                    modifier = Modifier.padding(bottom = 8.dp)
-                ) {
-                    Icon(painterResource(R.drawable.img), contentDescription = "Take Photo")
-                }
-                FloatingActionButton(
-                    onClick = { imagePickerLauncher.launch("image/*") }
-                ) {
-                    Icon(painterResource(R.drawable.img_1), contentDescription = "Pick from Gallery")
->>>>>>> d403a9bbed3c91b0f5fb5115fa24772c0ca68cc0
                 }
             }
         },
         floatingActionButtonPosition = FabPosition.Center
     ) { paddingValues ->
-        // AndroidView to embed CameraX PreviewView
-<<<<<<< HEAD
         if (hasCameraPermission) {
             AndroidView(
                 factory = { ctx ->
                     PreviewView(ctx).apply {
                         layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                        // ScaleType.FILL_CENTER for better preview
                         scaleType = PreviewView.ScaleType.FILL_CENTER
                     }
                 },
@@ -278,11 +178,8 @@ fun ScanBusinessCardScreen(
                             .also {
                                 it.setSurfaceProvider(previewView.surfaceProvider)
                             }
-
                         imageCapture.value = ImageCapture.Builder().build()
-
                         val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
                         try {
                             cameraProvider.unbindAll()
                             cameraProvider.bindToLifecycle(
@@ -307,97 +204,37 @@ fun ScanBusinessCardScreen(
                 CircularProgressIndicator()
             }
         }
-=======
-        AndroidView(
-            factory = { ctx ->
-                PreviewView(ctx).apply {
-                    layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                    // ScaleType.FILL_CENTER for better preview
-                    scaleType = PreviewView.ScaleType.FILL_CENTER
-                }
-            },
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            update = { previewView ->
-                val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-                cameraProviderFuture.addListener({
-                    val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-                    val preview = Preview.Builder()
-                        .build()
-                        .also {
-                            it.setSurfaceProvider(previewView.surfaceProvider)
-                        }
-
-                    imageCapture.value = ImageCapture.Builder().build()
-
-                    val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-                    try {
-                        cameraProvider.unbindAll()
-                        cameraProvider.bindToLifecycle(
-                            lifecycleOwner,
-                            cameraSelector,
-                            preview,
-                            imageCapture.value
-                        )
-                    } catch (exc: Exception) {
-                        Log.e("CameraX", "Use case binding failed", exc)
-                    }
-                }, ContextCompat.getMainExecutor(context))
-            }
-        )
->>>>>>> d403a9bbed3c91b0f5fb5115fa24772c0ca68cc0
     }
 }
 
-// Function to process image for OCR using ML Kit Text Recognition
-<<<<<<< HEAD
-=======
-// Function to process image for OCR using ML Kit Text Recognition
->>>>>>> d403a9bbed3c91b0f5fb5115fa24772c0ca68cc0
 private fun processImageForOcr(
     context: Context,
     imageUri: Uri,
     onScanComplete: (extractedData: Map<String, String>) -> Unit,
-    coroutineScope: CoroutineScope // Pass CoroutineScope here
+    coroutineScope: CoroutineScope
 ) {
     val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-
-    coroutineScope.launch { // This `launch` block creates a coroutine
+    coroutineScope.launch {
         val bitmap: Bitmap? = try {
-            withContext(Dispatchers.IO) { // <--- This withContext is fine here
+            withContext(Dispatchers.IO) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-<<<<<<< HEAD
-                    ImageDecoder.decodeBitmap(
-                        ImageDecoder.createSource(
-                            context.contentResolver,
-                            imageUri
-                        )
-                    )
-=======
                     ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, imageUri))
->>>>>>> d403a9bbed3c91b0f5fb5115fa24772c0ca68cc0
                 } else {
                     MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
                 }
             }
         } catch (e: Exception) {
             Log.e("OCR", "Failed to load bitmap: ${e.message}", e)
-            withContext(Dispatchers.Main) { // <--- This withContext is also fine
+            withContext(Dispatchers.Main) {
                 Toast.makeText(context, "Failed to load image for OCR", Toast.LENGTH_SHORT).show()
             }
             null
         }
-
         bitmap?.let { img ->
             val image = InputImage.fromBitmap(img, 0)
             recognizer.process(image)
                 .addOnSuccessListener { visionText ->
-                    // Since this block is a callback, it's not a coroutine.
-                    // If you need to use suspend functions (like withContext) here,
-                    // you must launch a new coroutine within this block.
-                    coroutineScope.launch { // Launch a new coroutine for suspend calls
+                    coroutineScope.launch {
                         val extractedText = visionText.textBlocks.joinToString("\n") { it.text }
                         val data = mapOf(
                             "name" to "",
@@ -405,25 +242,17 @@ private fun processImageForOcr(
                             "title" to "",
                             "extractedRawText" to extractedText
                         )
-
                         onScanComplete(data)
-
                         withContext(Dispatchers.Main) {
                             Toast.makeText(context, "OCR Complete!", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
                 .addOnFailureListener { e ->
-                    // Same here: Launch a new coroutine if you need suspend functions
-                    coroutineScope.launch { // Launch a new coroutine for suspend calls
+                    coroutineScope.launch {
                         Log.e("OCR", "Text recognition failed: ${e.message}", e)
                         withContext(Dispatchers.Main) {
-<<<<<<< HEAD
-                            Toast.makeText(context, "OCR failed: ${e.message}", Toast.LENGTH_LONG)
-                                .show()
-=======
                             Toast.makeText(context, "OCR failed: ${e.message}", Toast.LENGTH_LONG).show()
->>>>>>> d403a9bbed3c91b0f5fb5115fa24772c0ca68cc0
                         }
                     }
                 }

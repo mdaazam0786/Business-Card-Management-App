@@ -7,6 +7,8 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -121,12 +123,17 @@ fun ScanBusinessCardScreen(
                                 object : ImageCapture.OnImageSavedCallback {
                                     override fun onError(exc: ImageCaptureException) {
                                         Log.e("CameraX", "Photo capture failed: ${exc.message}", exc)
-                                        Toast.makeText(context, "Photo capture failed", Toast.LENGTH_SHORT).show()
+                                        Handler(Looper.getMainLooper()).post {
+                                            Toast.makeText(context, "Photo capture failed", Toast.LENGTH_SHORT).show()
+
+                                        }
                                     }
 
                                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                                         val savedUri = output.savedUri ?: Uri.fromFile(photoFile)
-                                        Toast.makeText(context, "Photo captured!", Toast.LENGTH_SHORT).show()
+                                        Handler(Looper.getMainLooper()).post {
+                                            Toast.makeText(context, "Photo captured!", Toast.LENGTH_SHORT).show()
+                                        }
                                         processImageForOcr(context, savedUri, onScanComplete, scope)
                                     }
                                 }
@@ -210,7 +217,7 @@ private fun processImageForOcr(
             }
         } catch (e: Exception) {
             Log.e("OCR", "Failed to load bitmap: ${e.message}", e)
-            withContext(Dispatchers.Main) { // <--- This withContext is also fine
+            Handler(Looper.getMainLooper()).post { // <--- This withContext is also fine
                 Toast.makeText(context, "Failed to load image for OCR", Toast.LENGTH_SHORT).show()
             }
             null
@@ -234,7 +241,8 @@ private fun processImageForOcr(
 
                         onScanComplete(data)
 
-                        withContext(Dispatchers.Main) {
+                        Handler(Looper.getMainLooper()).post {
+
                             Toast.makeText(context, "OCR Complete!", Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -243,7 +251,7 @@ private fun processImageForOcr(
                     // Same here: Launch a new coroutine if you need suspend functions
                     coroutineScope.launch { // Launch a new coroutine for suspend calls
                         Log.e("OCR", "Text recognition failed: ${e.message}", e)
-                        withContext(Dispatchers.Main) {
+                        Handler(Looper.getMainLooper()).post {
                             Toast.makeText(context, "OCR failed: ${e.message}", Toast.LENGTH_LONG).show()
                         }
                     }

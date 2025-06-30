@@ -121,20 +121,12 @@ fun ScanBusinessCardScreen(
                                 object : ImageCapture.OnImageSavedCallback {
                                     override fun onError(exc: ImageCaptureException) {
                                         Log.e("CameraX", "Photo capture failed: ${exc.message}", exc)
-                                        scope.launch { // Launch a coroutine
-                                            withContext(Dispatchers.Main) { // Switch to Main thread
-                                                Toast.makeText(context, "Photo capture failed", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
+                                        Toast.makeText(context, "Photo capture failed", Toast.LENGTH_SHORT).show()
                                     }
 
                                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                                         val savedUri = output.savedUri ?: Uri.fromFile(photoFile)
-                                        scope.launch { // Launch a coroutine
-                                            withContext(Dispatchers.Main) { // Switch to Main thread
-                                                Toast.makeText(context, "Photo captured!", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
+                                        Toast.makeText(context, "Photo captured!", Toast.LENGTH_SHORT).show()
                                         processImageForOcr(context, savedUri, onScanComplete, scope)
                                     }
                                 }

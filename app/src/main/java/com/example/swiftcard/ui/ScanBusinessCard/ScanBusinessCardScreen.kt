@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
+import androidx.camera.core.ImageCapture
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.*
@@ -42,27 +43,30 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import com.example.swiftcard.R
 
+// ScanBusinessCardScreen: Handles camera preview, image capture, and OCR.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanBusinessCardScreen(
-    onScanComplete: (extractedData: Map<String, String>) -> Unit,
+    onScanComplete: (extractedData: Map<String, String>) -> Unit, // Placeholder for extracted data
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor: MutableState<ExecutorService?> = remember { mutableStateOf(null) }
     val imageCapture: MutableState<ImageCapture?> = remember { mutableStateOf(null) }
-    val coroutineScope = rememberCoroutineScope() // CoroutineScope from the Composable
+    val scope = rememberCoroutineScope()
 
+    // Request camera permissions
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (!isGranted) {
             Toast.makeText(context, "Camera permission denied", Toast.LENGTH_SHORT).show()
-            onBack()
+            onBack() // Go back if permission is denied
         }
     }
 
+    // Launch permission request when the screen first appears
     LaunchedEffect(Unit) {
         when {
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED -> {
@@ -74,6 +78,7 @@ fun ScanBusinessCardScreen(
         }
     }
 
+    // DisposableEffect to manage camera executor lifecycle
     DisposableEffect(Unit) {
         cameraExecutor.value = Executors.newSingleThreadExecutor()
         onDispose {
@@ -81,11 +86,12 @@ fun ScanBusinessCardScreen(
         }
     }
 
+    // For picking an image from the gallery
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? ->
             uri?.let {
-                processImageForOcr(context, it, onScanComplete, coroutineScope)
+                processImageForOcr(context, it, onScanComplete, coroutineScope = scope)
             }
         }
     )
@@ -115,23 +121,13 @@ fun ScanBusinessCardScreen(
                                 object : ImageCapture.OnImageSavedCallback {
                                     override fun onError(exc: ImageCaptureException) {
                                         Log.e("CameraX", "Photo capture failed: ${exc.message}", exc)
-                                        // CORRECTED: Launch a coroutine to show Toast on Main thread
-                                        coroutineScope.launch {
-                                            withContext(Dispatchers.Main) {
-                                                Toast.makeText(context, "Photo capture failed", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
+                                        Toast.makeText(context, "Photo capture failed", Toast.LENGTH_SHORT).show()
                                     }
 
                                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                                         val savedUri = output.savedUri ?: Uri.fromFile(photoFile)
-                                        // CORRECTED: Launch a coroutine to show Toast on Main thread
-                                        coroutineScope.launch {
-                                            withContext(Dispatchers.Main) {
-                                                Toast.makeText(context, "Photo captured!", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                        processImageForOcr(context, savedUri, onScanComplete, coroutineScope)
+                                        Toast.makeText(context, "Photo captured!", Toast.LENGTH_SHORT).show()
+                                        processImageForOcr(context, savedUri, onScanComplete, scope)
                                     }
                                 }
                             )
@@ -150,10 +146,12 @@ fun ScanBusinessCardScreen(
         },
         floatingActionButtonPosition = FabPosition.Center
     ) { paddingValues ->
+        // AndroidView to embed CameraX PreviewView
         AndroidView(
             factory = { ctx ->
                 PreviewView(ctx).apply {
                     layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                    // ScaleType.FILL_CENTER for better preview
                     scaleType = PreviewView.ScaleType.FILL_CENTER
                 }
             },
@@ -191,17 +189,19 @@ fun ScanBusinessCardScreen(
     }
 }
 
+// Function to process image for OCR using ML Kit Text Recognition
+// Function to process image for OCR using ML Kit Text Recognition
 private fun processImageForOcr(
     context: Context,
     imageUri: Uri,
     onScanComplete: (extractedData: Map<String, String>) -> Unit,
-    coroutineScope: CoroutineScope
+    coroutineScope: CoroutineScope // Pass CoroutineScope here
 ) {
     val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
-    coroutineScope.launch {
+    coroutineScope.launch { // This `launch` block creates a coroutine
         val bitmap: Bitmap? = try {
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.IO) { // <--- This withContext is fine here
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, imageUri))
                 } else {
@@ -210,7 +210,7 @@ private fun processImageForOcr(
             }
         } catch (e: Exception) {
             Log.e("OCR", "Failed to load bitmap: ${e.message}", e)
-            withContext(Dispatchers.Main) {
+            withContext(Dispatchers.Main) { // <--- This withContext is also fine
                 Toast.makeText(context, "Failed to load image for OCR", Toast.LENGTH_SHORT).show()
             }
             null
@@ -220,7 +220,10 @@ private fun processImageForOcr(
             val image = InputImage.fromBitmap(img, 0)
             recognizer.process(image)
                 .addOnSuccessListener { visionText ->
-                    coroutineScope.launch {
+                    // Since this block is a callback, it's not a coroutine.
+                    // If you need to use suspend functions (like withContext) here,
+                    // you must launch a new coroutine within this block.
+                    coroutineScope.launch { // Launch a new coroutine for suspend calls
                         val extractedText = visionText.textBlocks.joinToString("\n") { it.text }
                         val data = mapOf(
                             "name" to "",
@@ -228,6 +231,7 @@ private fun processImageForOcr(
                             "title" to "",
                             "extractedRawText" to extractedText
                         )
+
                         onScanComplete(data)
 
                         withContext(Dispatchers.Main) {
@@ -236,7 +240,8 @@ private fun processImageForOcr(
                     }
                 }
                 .addOnFailureListener { e ->
-                    coroutineScope.launch {
+                    // Same here: Launch a new coroutine if you need suspend functions
+                    coroutineScope.launch { // Launch a new coroutine for suspend calls
                         Log.e("OCR", "Text recognition failed: ${e.message}", e)
                         withContext(Dispatchers.Main) {
                             Toast.makeText(context, "OCR failed: ${e.message}", Toast.LENGTH_LONG).show()

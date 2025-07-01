@@ -89,7 +89,14 @@ class MainActivity : ComponentActivity() {
                         AddEditScreen(
                             cardId = cardId,
                             extractedData = extractedDataMap,
-                            onPopBackStack = { navController.popBackStack() }
+                            onPopBackStack = { navController.popBackStack() },
+                            onNavigateToHome = {
+                                // Navigate to home screen and clear the back stack
+                                navController.navigate(Routes.HomeScreen) {
+                                    popUpTo(Routes.HomeScreen) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            }
                         )
                     }
 
@@ -118,4 +125,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

@@ -33,6 +33,7 @@ fun AddEditScreen( // Or whatever your Add/Edit composable is named
     cardId: String?, // Receive ID for editing existing card
     viewModel: AddEditViewModel = hiltViewModel(),
     onPopBackStack: () -> Unit, // Callback to navigate back
+    onNavigateToHome: () -> Unit = {}, // New callback to navigate to home
     extractedData: Map<String, String>? = null
 ) {
     val context = LocalContext.current
@@ -77,7 +78,16 @@ fun AddEditScreen( // Or whatever your Add/Edit composable is named
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collectLatest { event ->
             when (event) {
-                UiEvent.PopBackStack -> onPopBackStack()
+                UiEvent.PopBackStack -> {
+                    // Check if this is a new card (from scan) or editing existing card
+                    if (extractedData != null) {
+                        // This came from scan, navigate to home screen
+                        onNavigateToHome()
+                    } else {
+                        // This is editing, just pop back
+                        onPopBackStack()
+                    }
+                }
                 is UiEvent.ShowSnackBar -> {
                     snackbarHostState.showSnackbar(
                         message = event.message,

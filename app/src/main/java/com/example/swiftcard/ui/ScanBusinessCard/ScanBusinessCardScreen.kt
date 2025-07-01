@@ -1,6 +1,5 @@
 package com.example.swiftcard.ui.ScanBusinessCard
 
-
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -14,16 +13,11 @@ import android.util.Log
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.LinearLayout
 import android.widget.Toast
-
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-
-
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -40,11 +34,11 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-
+import androidx.compose.ui.draw.shadow // Import for shadow
 
 import androidx.core.content.ContextCompat
 import com.example.swiftcard.R
-import com.google.gson.Gson
+import com.google.gson.Gson // Make sure you've added the Gson dependency to build.gradle (app)
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -131,24 +125,24 @@ fun ScanBusinessCardScreen(
     // Main UI
     Scaffold(
         topBar = {
-        TopAppBar(title = { Text("Scan Business Card") }, navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack, contentDescription = "Back"
+            TopAppBar(title = { Text("Scan Business Card") }, navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack, contentDescription = "Back"
+                    )
+                }
+            })
+        }, floatingActionButton = {
+            FloatingActionButtons(onCapturePhoto = {
+                capturePhoto(
+                    imageCapture = imageCapture.value,
+                    context = context,
+                    cameraExecutor = cameraExecutor.value,
+                    onScanComplete = onScanComplete,
+                    scope = scope
                 )
-            }
-        })
-    }, floatingActionButton = {
-        FloatingActionButtons(onCapturePhoto = {
-            capturePhoto(
-                imageCapture = imageCapture.value,
-                context = context,
-                cameraExecutor = cameraExecutor.value,
-                onScanComplete = onScanComplete,
-                scope = scope
-            )
-        }, onPickFromGallery = { imagePickerLauncher.launch("image/*") })
-    }, floatingActionButtonPosition = FabPosition.Center
+            }, onPickFromGallery = { imagePickerLauncher.launch("image/*") })
+        }, floatingActionButtonPosition = FabPosition.Center
     ) { paddingValues ->
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -166,7 +160,7 @@ fun ScanBusinessCardScreen(
                     isCardDetected = detected
                 })
 
-            // Dynamic Card Detection Overlay
+            // Dynamic Card Detection Overlay (modified)
             CardDetectionOverlay(
                 isCardDetected = isCardDetected, detectedCardBounds = detectedCardBounds
             )
@@ -232,24 +226,25 @@ private fun CameraPreview(
 }
 
 /**
- * Dynamic Card Detection Overlay with Visual Feedback
+ * Dynamic Card Detection Overlay with Visual Feedback (MODIFIED for ID Card appearance)
  */
 @Composable
 private fun CardDetectionOverlay(
     isCardDetected: Boolean, detectedCardBounds: android.graphics.Rect?
 ) {
-    // Dynamic UI properties based on detection state
     val placeholderColor = if (isCardDetected) Color.Green else MaterialTheme.colorScheme.primary
     val placeholderText = if (isCardDetected) {
         "Card detected! Tap to capture"
     } else {
-        "Place business card within the frame"
+        "Align your ECI card within the frame" // Changed instruction text for clarity
     }
 
-    // Calculate dynamic size based on detected bounds
-    val (placeholderWidth, placeholderHeight) = calculatePlaceholderSize(detectedCardBounds)
+    // Define a typical ID card width and calculate height based on a common aspect ratio (e.g., 1.58:1)
+    // Adjust these values (cardWidth) if the visual guide isn't matching well on your device.
+    val cardWidth = 320.dp
+    val cardHeight = cardWidth / 1.58f // Standard ID card aspect ratio (approx 85.60mm / 53.98mm)
+    val cornerRadius = 12.dp // More pronounced rounded corners for a card look
 
-    // Main placeholder rectangle
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -257,16 +252,18 @@ private fun CardDetectionOverlay(
     ) {
         Box(
             modifier = Modifier
-                .size(width = placeholderWidth, height = placeholderHeight)
+                .size(width = cardWidth, height = cardHeight) // Fixed card dimensions
+                .shadow(elevation = 10.dp, shape = RoundedCornerShape(cornerRadius)) // Stronger shadow
                 .border(
-                    width = if (isCardDetected) 3.dp else 2.dp,
+                    width = if (isCardDetected) 3.dp else 1.5.dp, // Border thickness
                     color = placeholderColor,
-                    shape = MaterialTheme.shapes.medium
+                    shape = RoundedCornerShape(cornerRadius) // Match rounded corners
                 )
                 .background(
                     color = placeholderColor.copy(
-                        alpha = if (isCardDetected) 0.15f else 0.08f
-                    )
+                        alpha = if (isCardDetected) 0.15f else 0.08f // Subtle translucent background
+                    ),
+                    shape = RoundedCornerShape(cornerRadius) // Match rounded corners
                 )
         )
 
@@ -275,7 +272,7 @@ private fun CardDetectionOverlay(
             text = placeholderText,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = (-50).dp)
+                .offset(y = (-60).dp) // Adjusted offset to be higher
                 .background(
                     color = Color.Black.copy(alpha = 0.7f), shape = RoundedCornerShape(8.dp)
                 )
@@ -283,13 +280,24 @@ private fun CardDetectionOverlay(
             color = if (isCardDetected) Color.Green else Color.White,
             style = MaterialTheme.typography.bodyMedium
         )
-
-
     }
 }
 
+/**
+ * calculatePlaceholderSize (MODIFIED - Simplified for fixed aspect ratio)
+ *
+ * This function is now simplified as the overlay has a fixed size.
+ * We'll use the detectedCardBounds to influence the 'isCardDetected' state,
+ * but the visual frame will remain a consistent card size.
+ */
+private fun calculatePlaceholderSize(detectedCardBounds: android.graphics.Rect?): Pair<androidx.compose.ui.unit.Dp, androidx.compose.ui.unit.Dp> {
+    // We are no longer dynamically sizing the overlay based on detected bounds.
+    // The overlay is now a fixed visual guide for the user.
+    // The 'detectedCardBounds' will still be used by the analyzer to set 'isCardDetected'.
+    return Pair(0.dp, 0.dp) // Return dummy values, as they are no longer used by CardDetectionOverlay for size
+}
 
-// Function to process image for OCR using ML Kit Text Recognition
+
 /**
  * Processes an image for OCR using ML Kit Text Recognition.
  * Handles errors, empty results, and provides user feedback.
@@ -297,7 +305,7 @@ private fun CardDetectionOverlay(
 private fun processImageForOcr(
     context: Context,
     imageUri: Uri,
-    onScanComplete: (extractedData: String) -> Unit,
+    onScanComplete: (extractedDataJson: String) -> Unit, // Parameter type changed to String
     coroutineScope: CoroutineScope
 ) {
     val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
@@ -334,10 +342,13 @@ private fun processImageForOcr(
         val image = InputImage.fromBitmap(bitmap, 0)
         recognizer.process(image).addOnSuccessListener { visionText ->
             coroutineScope.launch {
-                // Join all recognized text blocks into a single string
                 val extractedText = visionText.textBlocks.joinToString("\n") { it.text }
+
+                // --- ADD THIS LOG STATEMENT ---
+                Log.d("OCR_DEBUG", "Raw Extracted Text:\n$extractedText")
+                // --- END LOG STATEMENT ---
+
                 if (extractedText.isBlank()) {
-                    // Notify user if no text was found
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
                             context, "No text found on the card.", Toast.LENGTH_SHORT
@@ -345,14 +356,15 @@ private fun processImageForOcr(
                     }
                     return@launch
                 }
-                // Parse the extracted text for business card fields
-                val parsedData = parseBusinessCardText(extractedText)
-                // Convert parsed data to JSON
+                val parsedData = parseECICardText(extractedText)
                 val gson = Gson()
                 val extractedDataJson = gson.toJson(parsedData)
-                // Pass the result to the callback
+
+                // --- ADD THIS LOG STATEMENT ---
+                Log.d("OCR_DEBUG", "Parsed Data JSON:\n$extractedDataJson")
+                // --- END LOG STATEMENT ---
+
                 onScanComplete(extractedDataJson)
-                // Notify user of completion
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, "OCR Complete!", Toast.LENGTH_SHORT).show()
                 }
@@ -370,229 +382,153 @@ private fun processImageForOcr(
 }
 
 /**
- * Simplified business card text parsing focused on essential fields
- * Extracts only: Name, Company, and Job Title (matching AddEditScreen fields)
+ * Parses text specifically for ECI Voter ID card fields: Name, DOB, EPIC No., Gender, Relation Name.
+ * This uses heuristic rules and may require refinement based on actual card layouts.
  */
-private fun parseBusinessCardText(extractedText: String): Map<String, String> {
+private fun parseECICardText(extractedText: String): Map<String, String> {
     val parsedData = mutableMapOf<String, String>()
-    val lines = extractedText.lines().filter { it.isNotBlank() && it.trim().length > 1 }
+    val lines = extractedText.lines().map { it.trim() }.filter { it.isNotBlank() }
 
-    // Clean lines by removing lines with emails, phones, websites, and addresses
-    val cleanedLines = lines.filter { line ->
-        val trimmedLine = line.trim()
+    val remainingLines = lines.toMutableList()
 
-        // Skip lines with email patterns
-        !trimmedLine.contains("@") &&
+    // --- 1. Extract EPIC No. ---
+    val epicNoPattern = Regex("([A-Z]{3}\\d{7}|[A-Z]{2,3}/\\d{2}/\\d{3}/\\d{6}|[A-Z0-9]{10,})")
+    val epicNoKeywordPattern = Regex("(?i)(EPIC\\s*No\\.?|ID\\s*No\\.?|No\\.?)\\s*[:]?\\s*([A-Z0-9]{7,15})")
 
-                // Skip lines with phone number patterns
-                !trimmedLine.matches(Regex(".*\\+?\\d[\\d\\s\\-\\(\\)\\.]{7,}.*")) &&
-
-                // Skip lines with website patterns
-                !trimmedLine.contains(
-                    Regex(
-                        "www\\.|http|\\.[a-z]{2,4}(/|\\s|\$)", RegexOption.IGNORE_CASE
-                    )
-                ) &&
-
-                // Skip lines with address indicators
-                !trimmedLine.contains(
-                    Regex(
-                        "street|avenue|road|drive|lane|blvd|st\\b|ave\\b|rd\\b",
-                        RegexOption.IGNORE_CASE
-                    )
-                ) &&
-
-                // Skip lines that are mostly numbers or special characters
-                !trimmedLine.matches(Regex("^[\\d\\s\\-\\+\\(\\)\\.#]+\$")) &&
-
-                // Keep lines with reasonable length (2-50 characters)
-                trimmedLine.length in 2..50
-    }
-
-    // Job title indicators for better detection
-    val jobTitleIndicators = listOf(
-        "CEO",
-        "CTO",
-        "CFO",
-        "COO",
-        "CIO",
-        "CMO",
-        "President",
-        "Vice President",
-        "VP",
-        "Director",
-        "Manager",
-        "Assistant Manager",
-        "Senior",
-        "Junior",
-        "Lead",
-        "Head",
-        "Supervisor",
-        "Coordinator",
-        "Specialist",
-        "Analyst",
-        "Consultant",
-        "Engineer",
-        "Developer",
-        "Designer",
-        "Architect",
-        "Executive",
-        "Officer",
-        "Administrator"
-    )
-
-    // Company name indicators
-    val companyIndicators = listOf(
-        "Inc",
-        "LLC",
-        "Corp",
-        "Corporation",
-        "Ltd",
-        "Limited",
-        "Company",
-        "Co",
-        "Group",
-        "Solutions",
-        "Technologies",
-        "Services",
-        "Consulting",
-        "Systems",
-        "Enterprise",
-        "Global",
-        "International",
-        "Associates",
-        "Partners"
-    )
-
-    var nameFound = false
-    var companyFound = false
-    var titleFound = false
-
-    // First pass: Look for job titles (they're usually easier to identify)
-    for (line in cleanedLines) {
-        val trimmedLine = line.trim()
-
-        if (!titleFound && jobTitleIndicators.any { indicator ->
-                trimmedLine.contains(indicator, ignoreCase = true)
-            }) {
-            // Use "title" to match AddEditScreen field name
-            parsedData["title"] = trimmedLine
-            titleFound = true
+    for (line in lines) {
+        val keywordMatch = epicNoKeywordPattern.find(line)
+        if (keywordMatch != null) {
+            parsedData["epicNumber"] = keywordMatch.groupValues[2].trim()
+            remainingLines.remove(line)
+            break
+        }
+        val directMatch = epicNoPattern.find(line)
+        if (directMatch != null && parsedData["epicNumber"].isNullOrBlank() && !line.contains(Regex("\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}"))) {
+            parsedData["epicNumber"] = directMatch.value.trim()
+            remainingLines.remove(line)
+            break
         }
     }
 
-    // Second pass: Look for company names
-    for (line in cleanedLines) {
-        val trimmedLine = line.trim()
+    // --- 2. Extract Date of Birth (DOB) ---
+    val dobKeywordPattern = Regex("(?i)(Date\\s*of\\s*Birth\\s*/\\s*Age|जन्मतिथि\\s*/\\s*आयु|DOB)\\s*[:]?\\s*(\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4})")
+    val directDatePattern = Regex("\\b\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}\\b")
 
-        // Skip if this line is already identified as job title
-        if (trimmedLine == parsedData["title"]) continue
-
-        if (!companyFound && isLikelyCompanyName(trimmedLine, companyIndicators)) {
-            // Use "company" to match AddEditScreen field name
-            parsedData["company"] = trimmedLine
-            companyFound = true
+    for (line in lines) {
+        val keywordMatch = dobKeywordPattern.find(line)
+        if (keywordMatch != null) {
+            parsedData["dob"] = keywordMatch.groupValues[2].trim()
+            remainingLines.remove(line)
+            break
         }
-    }
-
-    // Third pass: Look for person names
-    for (line in cleanedLines) {
-        val trimmedLine = line.trim()
-
-        // Skip if this line is already identified as job title or company
-        if (trimmedLine == parsedData["title"] || trimmedLine == parsedData["company"]) continue
-
-        if (!nameFound && isLikelyPersonName(trimmedLine)) {
-            // Use "name" to match AddEditScreen field name
-            parsedData["name"] = trimmedLine
-            nameFound = true
-        }
-    }
-
-    // Fallback logic: Use position-based detection if some fields are still missing
-    val remainingLines = cleanedLines.filter { line ->
-        val trimmedLine = line.trim()
-        trimmedLine != parsedData["title"] && trimmedLine != parsedData["company"] && trimmedLine != parsedData["name"]
-    }
-
-    // If no name found, use the first remaining line that looks like a name
-    if (!nameFound && remainingLines.isNotEmpty()) {
-        for (line in remainingLines) {
-            if (isLikelyPersonName(line.trim())) {
-                parsedData["name"] = line.trim()
-                nameFound = true
-                break
-            }
-        }
-
-        // If still no name found, use first line as fallback
-        if (!nameFound && cleanedLines.isNotEmpty()) {
-            parsedData["name"] = cleanedLines[0].trim()
-        }
-    }
-
-    // If no company found, look for any line that could be a company
-    if (!companyFound && remainingLines.isNotEmpty()) {
-        for (line in remainingLines) {
-            val trimmedLine = line.trim()
-            if (trimmedLine != parsedData["name"] && (companyIndicators.any {
-                    trimmedLine.contains(
-                        it, ignoreCase = true
-                    )
-                } || trimmedLine.split("\\s+".toRegex()).size <= 4)) {
-                parsedData["company"] = trimmedLine
+        val directMatch = directDatePattern.find(line)
+        if (directMatch != null && parsedData["dob"].isNullOrBlank()) {
+            val matchedValue = directMatch.value.trim()
+            if (matchedValue.contains("/") || matchedValue.contains("-") || matchedValue.length == 4) {
+                parsedData["dob"] = matchedValue
+                remainingLines.remove(line)
                 break
             }
         }
     }
 
-    // Return only non-empty values with correct field names for AddEditScreen
+    // --- 3. Extract Gender ---
+    val genderKeywordPattern = Regex("(?i)(लिंग\\s*/\\s*Gender)\\s*[:]?\\s*(पुरुष|महिला|Male|Female|M|F)")
+    val directGenderPattern = Regex("(?i)\\b(पुरुष|महिला|Male|Female|M|F)\\b")
+
+    for (line in lines) {
+        val keywordMatch = genderKeywordPattern.find(line)
+        if (keywordMatch != null) {
+            parsedData["gender"] = keywordMatch.groupValues[2].trim()
+            remainingLines.remove(line)
+            break
+        }
+        val directMatch = directGenderPattern.find(line)
+        if (directMatch != null && parsedData["gender"].isNullOrBlank()) {
+            parsedData["gender"] = directMatch.value.trim()
+            remainingLines.remove(line)
+            break
+        }
+    }
+
+    // --- 4. Extract Name and Relation Name ---
+    val nameKeyword = Regex("(?i)(नाम|Name)\\s*[:]?\\s*(.*)") // Capture everything after the keyword and colon/space
+    val relationKeyword = Regex("(?i)(पिता\\s*का\\s*नाम|Father's\\s*Name|पति\\s*का\\s*नाम|Husband's\\s*Name|माता\\s*का\\s*नाम|Mother's\\s*Name|S/o|D/o|W/o)\\s*[:]?\\s*(.*)") // Capture everything after
+
+    for (line in lines) {
+        val trimmedLine = line.trim()
+
+        if (parsedData["name"].isNullOrBlank()) {
+            val nameMatch = nameKeyword.find(trimmedLine)
+            if (nameMatch != null) {
+                val nameValue = nameMatch.groupValues[2].trim() // Capture the content from the second capturing group
+                if (nameValue.isNotBlank() && nameValue.length > 2 && !nameValue.contains(Regex("\\d"))) {
+                    parsedData["name"] = nameValue
+                    continue // Move to next line
+                }
+            }
+        }
+
+        if (parsedData["relationName"].isNullOrBlank()) {
+            val relationMatch = relationKeyword.find(trimmedLine)
+            if (relationMatch != null) {
+                val relationValue = relationMatch.groupValues[2].trim() // Capture the content from the second capturing group
+                if (relationValue.isNotBlank() && relationValue.length > 2 && !relationValue.contains(Regex("\\d"))) {
+                    parsedData["relationName"] = relationValue
+                    continue // Move to next line
+                }
+            }
+        }
+    }
+
+    // Fallback: If names are still missing, try to pick from remaining lines based on common order
+    // (This part might need further refinement based on diverse OCR outputs)
+    val tempRemainingLines = remainingLines.filter {
+        // Only consider lines that haven't been assigned yet to any specific field
+        !parsedData.containsValue(it)
+    }.toMutableList()
+
+    if (parsedData["name"].isNullOrBlank()) {
+        val potentialName = tempRemainingLines.firstOrNull {
+            // Heuristic for name: multiple words, reasonable length, no numbers
+            it.split(" ").size > 1 && it.length > 5 && !it.contains(Regex("\\d"))
+        }
+        if (potentialName != null) {
+            parsedData["name"] = potentialName
+            tempRemainingLines.remove(potentialName)
+        }
+    }
+
+    if (parsedData["relationName"].isNullOrBlank()) {
+        val potentialRelationName = tempRemainingLines.firstOrNull {
+            // Heuristic for relation name: multiple words, reasonable length, no numbers, and not the same as parsed name
+            it.split(" ").size > 1 && it.length > 5 && !it.contains(Regex("\\d")) && parsedData["name"] != it
+        }
+        if (potentialRelationName != null) {
+            parsedData["relationName"] = potentialRelationName
+        }
+    }
+
+    parsedData["extractedRawText"] = extractedText
+
     return parsedData.filterValues { it.isNotEmpty() }
 }
 
-/**
- * Enhanced helper function to identify person names
- */
+
+// These helper functions might not be as relevant for ECI cards, and can be removed or modified
+// if not used elsewhere for other parsing logic. For ECI, the main parsing is in parseECICardText itself.
 private fun isLikelyPersonName(line: String): Boolean {
     val words = line.split("\\s+".toRegex()).filter { it.isNotEmpty() }
-
-    return when {
-        // Names typically have 2-4 words
-        words.size !in 2..4 -> false
-
-        // Each word should start with uppercase and contain mostly letters
-        words.all { word ->
-            word.length >= 2 && word.first()
-                .isUpperCase() && word.count { it.isLetter() } >= word.length * 0.7 && // At least 70% letters
-                    word.all { it.isLetter() || it in "'-." }
-        } -> true
-
-        else -> false
+    return words.size in 2..4 && words.all { word ->
+        word.first().isUpperCase() && word.all { it.isLetter() || it in "'-." }
     }
 }
 
-/**
- * Enhanced helper function to identify company names
- */
 private fun isLikelyCompanyName(line: String, companyIndicators: List<String>): Boolean {
-    return when {
-        // Too long for typical company name
-        line.length > 40 -> false
-
-        // Contains company indicators
-        companyIndicators.any { line.contains(it, ignoreCase = true) } -> true
-
-        // Reasonable word count for company names
-        line.split("\\s+".toRegex()).size in 1..6 -> {
-            // Has mixed case or all caps (typical for company names)
-            line.any { it.isUpperCase() } && line.any { it.isLetter() } &&
-                    // Not all lowercase (less likely to be a company name)
-                    !line.all { it.isLowerCase() || !it.isLetter() }
-        }
-
-        else -> false
-    }
+    // This is from business card context, unlikely for ECI card.
+    return false // Or implement ECI specific checks for organization names if any
 }
+
 
 /**
  * CardDetectionAnalyzer: Real-time card detection using ML Kit Text Recognition
@@ -630,12 +566,12 @@ private class CardDetectionAnalyzer(
                             maxX = maxOf(maxX, boundingBox.right)
                             maxY = maxOf(maxY, boundingBox.bottom)
 
-                            // Check for business card keywords
+                            // Check for business card keywords (adapted for ID card potential text)
                             val text = block.text.lowercase()
-                            if (text.contains("@") || text.contains("phone") || text.contains("email") || text.contains(
-                                    "www"
-                                ) || text.contains(".com") || text.contains("tel") || text.matches(
-                                    Regex(".*\\d{3}[-.]?\\d{3}[-.]?\\d{4}.*")
+                            if (text.contains("name") || text.contains("date of birth") || text.contains("epic no") || text.contains(
+                                    "gender"
+                                ) || text.contains("father's name") || text.matches(
+                                    Regex("\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}") // Date pattern
                                 )
                             ) {
                                 hasBusinessCardKeywords = true
@@ -661,20 +597,6 @@ private class CardDetectionAnalyzer(
         } else {
             imageProxy.close()
         }
-    }
-}
-
-/**
- * Calculate placeholder size based on detected card bounds
- */
-private fun calculatePlaceholderSize(detectedCardBounds: android.graphics.Rect?): Pair<androidx.compose.ui.unit.Dp, androidx.compose.ui.unit.Dp> {
-    return if (detectedCardBounds != null) {
-        val bounds = detectedCardBounds
-        val detectedWidth = (bounds.width() * 0.8f).coerceAtLeast(200f).coerceAtMost(350f)
-        val detectedHeight = (bounds.height() * 0.8f).coerceAtLeast(120f).coerceAtMost(200f)
-        Pair(detectedWidth.dp, detectedHeight.dp)
-    } else {
-        Pair(280.dp, 160.dp) // Default business card aspect ratio
     }
 }
 
@@ -741,12 +663,16 @@ private fun capturePhoto(
     scope: CoroutineScope
 ) {
     val capture = imageCapture ?: run {
-        Toast.makeText(context, "Camera not ready", Toast.LENGTH_SHORT).show()
+        Handler(Looper.getMainLooper()).post { // Ensure Toast is on Main thread
+            Toast.makeText(context, "Camera not ready", Toast.LENGTH_SHORT).show()
+        }
         return
     }
 
     val executor = cameraExecutor ?: run {
-        Toast.makeText(context, "Camera executor not available", Toast.LENGTH_SHORT).show()
+        Handler(Looper.getMainLooper()).post { // Ensure Toast is on Main thread
+            Toast.makeText(context, "Camera executor not available", Toast.LENGTH_SHORT).show()
+        }
         return
     }
 

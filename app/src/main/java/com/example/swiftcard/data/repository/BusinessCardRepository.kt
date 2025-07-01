@@ -1,11 +1,13 @@
 package com.example.swiftcard.data.repository
 
+import android.net.Uri
 import com.example.swiftcard.data.model.BusinessCard
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -19,6 +21,7 @@ class BusinessCardRepository @Inject constructor(
 
 ) {
     private val databaseReference : DatabaseReference = FirebaseDatabase.getInstance().getReference("BusinessCards")
+    private val storageReference = FirebaseStorage.getInstance().getReference("card_images")
 
     suspend fun saveBusinessCard(businessCard: BusinessCard) {
         if (businessCard.id.isEmpty()) {
@@ -60,6 +63,12 @@ class BusinessCardRepository @Inject constructor(
         databaseReference.addValueEventListener(listener)
 
         awaitClose { databaseReference.removeEventListener(listener) }
+    }
+
+    suspend fun uploadImage(imageUri: Uri, cardId: String): String {
+        val imageRef = storageReference.child("$cardId.jpg") // Store image with card's ID
+        imageRef.putFile(imageUri).await() // Upload the file
+        return imageRef.downloadUrl.await().toString() // Get the download URL
     }
 
 

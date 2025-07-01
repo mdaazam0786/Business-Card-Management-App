@@ -3,16 +3,8 @@ package com.example.swiftcard
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,7 +16,7 @@ import com.example.swiftcard.ui.ScanBusinessCard.ScanBusinessCardScreen
 import com.example.swiftcard.ui.home.HomeScreen
 import com.example.swiftcard.ui.theme.SwiftCardTheme
 import com.example.swiftcard.util.Routes
-import com.example.swiftcard.util.Screen
+import com.google.gson.Gson
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -64,12 +56,13 @@ class MainActivity : ComponentActivity() {
 
                     // Use Routes.SCAN_BUSINESS_CARD for the composable route
                     composable(Routes.ScanBusinessCardScreen) {
-                        ScanBusinessCardScreen (
-                            onScanComplete = { extractedData ->
-                                // Navigate to AddEdit screen with extracted data
-                                // Use Routes.createAddEditBusinessCardRoute for the new card
-                                navController.navigate(Routes.createAddEditBusinessCardRoute("null")) {
-                                    popUpTo(Routes.ScanBusinessCardScreen) { inclusive = true } // Clear scan screen from back stack
+                        ScanBusinessCardScreen(
+                            onScanComplete = { extractedDataJson ->
+                                // Construct the route using your Routes object and query parameters
+                                navController.navigate(
+                                    "${Routes.AddBusinessCardScreen}?cardId=null&extractedDataJson=${extractedDataJson}"
+                                ) {
+                                    popUpTo(Routes.ScanBusinessCardScreen) { inclusive = true }
                                 }
                             },
                             onBack = { navController.popBackStack() }
@@ -78,20 +71,25 @@ class MainActivity : ComponentActivity() {
 
                     // Use Routes.ADD_EDIT_BUSINESS_CARD for the composable route
                     composable(
-                        route = Routes.AddBusinessCardScreen, // Use the constant with the placeholder
+                        route = "${Routes.AddBusinessCardScreen}?cardId={cardId}&extractedDataJson={extractedDataJson}",
                         arguments = listOf(
-                            navArgument("businessCardId"){
-                                type = NavType.StringType
-                                nullable = true
-                                defaultValue = "null"
-                            }
-                            )
+                            navArgument("cardId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                            navArgument("extractedDataJson") { type = NavType.StringType; nullable = true; defaultValue = null }
+                        )
                     ) { backStackEntry ->
-                        val businessCardId = backStackEntry.arguments?.getString("businessCardId")
+                        val cardId = backStackEntry.arguments?.getString("cardId")
+                        val extractedDataJson = backStackEntry.arguments?.getString("extractedDataJson")
+
+                        val extractedDataMap: Map<String, String>? = if (!extractedDataJson.isNullOrBlank()) {
+                            Gson().fromJson(extractedDataJson, object : com.google.gson.reflect.TypeToken<Map<String, String>>() {}.type)
+                        } else {
+                            null
+                        }
+
                         AddEditScreen(
-                            businessCardId = if (businessCardId == "null") null else businessCardId,
-                            onSaveComplete = { navController.popBackStack() },
-                            onBack = { navController.popBackStack() }
+                            cardId = cardId,
+                            extractedData = extractedDataMap,
+                            onPopBackStack = { navController.popBackStack() }
                         )
                     }
 

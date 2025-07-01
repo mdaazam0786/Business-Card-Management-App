@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
+import com.google.gson.Gson
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
@@ -49,8 +50,8 @@ import com.example.swiftcard.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanBusinessCardScreen(
-    onScanComplete: (extractedData: Map<String, String>) -> Unit, // Placeholder for extracted data
-    onBack: () -> Unit
+    onScanComplete: (extractedDataJson: String) -> Unit,// Placeholder for extracted data
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -205,17 +206,19 @@ fun ScanBusinessCardScreen(
 
 // Function to process image for OCR using ML Kit Text Recognition
 // Function to process image for OCR using ML Kit Text Recognition
+// In your ScanBusinessCardScreen.kt file, modify processImageForOcr:
+
 private fun processImageForOcr(
     context: Context,
     imageUri: Uri,
-    onScanComplete: (extractedData: Map<String, String>) -> Unit,
+    onScanComplete: (extractedData: String) -> Unit,
     coroutineScope: CoroutineScope // Pass CoroutineScope here
 ) {
     val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
-    coroutineScope.launch { // This `launch` block creates a coroutine
+    coroutineScope.launch {
         val bitmap: Bitmap? = try {
-            withContext(Dispatchers.IO) { // <--- This withContext is fine here
+            withContext(Dispatchers.IO) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, imageUri))
                 } else {
@@ -224,7 +227,7 @@ private fun processImageForOcr(
             }
         } catch (e: Exception) {
             Log.e("OCR", "Failed to load bitmap: ${e.message}", e)
-            withContext(Dispatchers.Main) { // <--- This withContext is also fine
+            withContext(Dispatchers.Main) {
                 Toast.makeText(context, "Failed to load image for OCR", Toast.LENGTH_SHORT).show()
             }
             null
@@ -234,19 +237,15 @@ private fun processImageForOcr(
             val image = InputImage.fromBitmap(img, 0)
             recognizer.process(image)
                 .addOnSuccessListener { visionText ->
-                    // Since this block is a callback, it's not a coroutine.
-                    // If you need to use suspend functions (like withContext) here,
-                    // you must launch a new coroutine within this block.
-                    coroutineScope.launch { // Launch a new coroutine for suspend calls
+                    coroutineScope.launch {
                         val extractedText = visionText.textBlocks.joinToString("\n") { it.text }
-                        val data = mapOf(
-                            "name" to "",
-                            "company" to "",
-                            "title" to "",
-                            "extractedRawText" to extractedText
-                        )
+                        val parsedData = parseBusinessCardText(extractedText)
 
-                        onScanComplete(data)
+                        // Convert map to JSON string before passing via callback
+                        val gson = Gson() // Use Gson
+                        val extractedDataJson = gson.toJson(parsedData)
+
+                        onScanComplete(extractedDataJson) // Pass JSON string
 
                         withContext(Dispatchers.Main) {
                             Toast.makeText(context, "OCR Complete!", Toast.LENGTH_SHORT).show()
@@ -254,8 +253,7 @@ private fun processImageForOcr(
                     }
                 }
                 .addOnFailureListener { e ->
-                    // Same here: Launch a new coroutine if you need suspend functions
-                    coroutineScope.launch { // Launch a new coroutine for suspend calls
+                    coroutineScope.launch {
                         Log.e("OCR", "Text recognition failed: ${e.message}", e)
                         withContext(Dispatchers.Main) {
                             Toast.makeText(context, "OCR failed: ${e.message}", Toast.LENGTH_LONG).show()
@@ -264,4 +262,36 @@ private fun processImageForOcr(
                 }
         }
     }
+}
+
+// Add this new private function outside your ScanBusinessCardScreen composable
+// (e.g., below it, or in a separate utility file if you prefer)
+private fun parseBusinessCardText(extractedText: String): Map<String, String> {
+    val parsedData = mutableMapOf<String, String>()
+
+
+    var remainingText = extractedText.lines().toMutableList()
+
+
+
+    // Heuristic for Name, Company, Title (very basic)
+    // This part is highly dependent on card layout and will need refinement
+    val cleanedLines = remainingText.filter { it.isNotBlank() && it.length > 2 }
+
+    if (cleanedLines.isNotEmpty()) {
+        // Simple heuristic: First non-empty line could be name/company
+        parsedData["name"] = cleanedLines.getOrElse(0) { "" }
+
+        if (cleanedLines.size > 1) {
+            parsedData["company"] = cleanedLines.getOrElse(1) { "" }
+        }
+        if (cleanedLines.size > 2) {
+            parsedData["title"] = cleanedLines.getOrElse(2) { "" }
+        }
+    }
+
+    // Always include the raw text
+    parsedData["extractedRawText"] = extractedText
+
+    return parsedData
 }

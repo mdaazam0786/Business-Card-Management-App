@@ -1,6 +1,7 @@
 package com.example.swiftcard.ui.AddEdit
 
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.swiftcard.data.model.BusinessCard
@@ -30,6 +31,9 @@ class AddEditViewModel @Inject constructor(
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
+    private val _isImageUploading = MutableStateFlow(false) // New state for image upload
+    val isImageUploading: StateFlow<Boolean> = _isImageUploading.asStateFlow()
+
     // Loads an existing business card for editing.
     fun loadBusinessCard(id: String) {
         viewModelScope.launch {
@@ -55,6 +59,36 @@ class AddEditViewModel @Inject constructor(
             }
         }
     }
+    fun onImageSelected(imageUri: Uri) {
+        _isImageUploading.value = true
+        viewModelScope.launch {
+            try {
+                val currentCard = _businessCard.value
+                val cardId = currentCard?.id ?: "" // Use existing ID or provide a new one (important for storage path)
+
+                if (cardId.isEmpty()) {
+
+                    sendUiEvent(UiEvent.ShowSnackBar(message = "Please save card details first if adding new image for new card."))
+                    _isImageUploading.value = false
+                    return@launch
+                }
+
+                sendUiEvent(UiEvent.ShowSnackBar(message = "Uploading image..."))
+                val imageUrl = repository.uploadImage(imageUri, cardId) // Call new repository function
+
+                // Update the businessCard StateFlow with the new image URL
+                _businessCard.value = _businessCard.value?.copy(imageURL = imageUrl)
+
+                sendUiEvent(UiEvent.ShowSnackBar(message = "Image uploaded successfully!"))
+            } catch (e: Exception) {
+                println("Error uploading image: ${e.message}")
+                sendUiEvent(UiEvent.ShowSnackBar(message = "Error uploading image: ${e.message}"))
+            } finally {
+                _isImageUploading.value = false
+            }
+        }
+    }
+
     private fun sendUiEvent(event: UiEvent) {
         viewModelScope.launch {
             _uiEvent.send(event)
